@@ -223,3 +223,146 @@ For questions or enhancements, create an issue or submit a pull request.
 ## 📜 License
 
 This project is licensed under the MIT License.
+
+
+
+
+# **PDF Ingestion from ADLS Gen2 to Unity Catalog – Technical Guide**
+
+## **1. Overview**
+
+This document provides a step-by-step guide for copying PDF files from **Azure Data Lake Storage (ADLS Gen2)** into **Databricks Unity Catalog** using a Databricks Notebook. This enables teams to manage, govern, and prepare PDF assets for ML/AI workloads.
+
+---
+
+## **2. Prerequisites**
+
+Before starting, ensure the following:
+
+* Unity Catalog is enabled for your workspace.
+* A Unity Catalog volume is created for storing PDFs.
+* ADLS Gen2 is mounted or accessible via `abfss://` path.
+
+### **Create Unity Catalog Volume**
+
+```sql
+CREATE VOLUME IF NOT EXISTS main.ml_schema.pdf_volume;
+```
+
+This creates a managed location:
+
+```
+/Volumes/main/ml_schema/pdf_volume/
+```
+
+---
+
+## **3. Architecture Overview**
+
+```
+ADLS Gen2 (PDF Files)
+        ↓
+Databricks Notebook (Copy Job)
+        ↓
+Unity Catalog Volume
+        ↓
+Optional: Delta Metadata Table for PDF Governance & ML
+```
+
+---
+
+## **4. Method 1 – BinaryFile Copy (Recommended for ML Use Cases)**
+
+This method reads PDFs as binary content and writes them into Unity Catalog.
+
+### **4.1 Read PDF Files from ADLS**
+
+```python
+adls_path = "abfss://container@storageaccount.dfs.core.windows.net/source-pdfs/"
+uc_volume_path = "/Volumes/main/ml_schema/pdf_volume/"
+
+df = spark.read.format("binaryFile") \
+    .option("pathGlobFilter", "*.pdf") \
+    .load(adls_path)
+```
+
+### **4.2 Write PDFs into Unity Catalog Volume**
+
+```python
+df.write \
+  .mode("overwrite") \
+  .format("binaryFile") \
+  .save(uc_volume_path)
+```
+
+### **4.3 Verify Files**
+
+```python
+display(dbutils.fs.ls("/Volumes/main/ml_schema/pdf_volume"))
+```
+
+---
+
+## **5. Method 2 – Direct File Copy (Simple Migration)**
+
+```python
+source_path = "abfss://container@storageaccount.dfs.core.windows.net/source-pdfs/"
+target_path = "/Volumes/main/ml_schema/pdf_volume/"
+
+files = dbutils.fs.ls(source_path)
+
+for file in files:
+    if file.name.endswith(".pdf"):
+        dbutils.fs.cp(file.path, target_path + file.name)
+```
+
+---
+
+## **6. Creating a Delta Metadata Table (Optional, ML-Ready)**
+
+This table stores metadata + binary PDF content for analytics and ML pipelines.
+
+```python
+spark.read.format("binaryFile") \
+     .load("/Volumes/main/ml_schema/pdf_volume") \
+     .write \
+     .mode("overwrite") \
+     .saveAsTable("main.ml_schema.pdf_documents")
+```
+
+### **6.1 Metadata Stored**
+
+| Column           | Description                  |
+| ---------------- | ---------------------------- |
+| path             | Path of the PDF file         |
+| modificationTime | Last updated time            |
+| length           | File size in bytes           |
+| content          | PDF content in binary format |
+
+---
+
+## **7. Benefits of Storing PDFs in Unity Catalog**
+
+* Centralized governance and access controls
+* ML-ready storage format for document intelligence
+* Versioning and lineage with Delta Lake
+* Easy integration with Databricks Model Serving and AI workflows
+
+---
+
+## **8. Optional Extensions**
+
+You can extend this workflow with:
+
+* Text extraction (OCR / PyPDF2 / Azure Document Intelligence)
+* Vector embeddings for search and RAG
+* Automated ingestion using ADF or Databricks Jobs
+
+---
+
+## **9. Summary**
+
+This solution provides an enterprise-grade approach to ingesting, governing, and preparing PDF data for ML and analytics within Databricks Unity Catalog.
+
+Use the provided notebook snippets to automate PDF ingestion and optionally build a metadata layer for advanced AI/ML use cases.
+
