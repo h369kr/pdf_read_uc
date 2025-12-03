@@ -366,3 +366,35 @@ This solution provides an enterprise-grade approach to ingesting, governing, and
 
 Use the provided notebook snippets to automate PDF ingestion and optionally build a metadata layer for advanced AI/ML use cases.
 
+
+
+
+
+A few clarifications to better tailor the approach:
+
+What type of PDFs are you working with?
+
+PDFs that already contain tables (like reports, invoices, financial statements)?
+Text-heavy PDFs that you want to structure into tabular format?
+Scanned/image-based PDFs that need OCR?
+
+
+What's the desired output structure?
+
+One row per page with extracted text?
+Actual table extraction (if PDFs contain tables)?
+Custom schema based on document type?
+
+
+Scale and automation?
+
+Batch processing of multiple PDFs?
+Scheduled pipeline or one-time extraction?
+
+
+Tools preference?
+
+Open source libraries (PyPDF2, pdfplumber, tabula-py)?
+Azure Document Intelligence (formerly Form Recognizer)?
+Other commercial OCR services?
+
